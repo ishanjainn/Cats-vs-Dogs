@@ -1,0 +1,30 @@
+- name: Get EBS Volumes data
+  hosts: localhost
+  connection: local
+
+  tasks:
+    - name: Get all data for EBS Volumes
+      ec2_vol_info:
+      register: ebs_data
+
+    - name: tag production volume
+      ec2_tag:
+        region: "{{ item.region }}"
+        resource: "{{ item.id }}"
+        when: (item.tags.keys()[1].split('/')[2]=="p-apps")
+        tags:
+          cost: "production"
+          env: "production"
+        when: (item.tags.keys()[1].split('/')[2]=="s-apps")
+          tags:
+            cost: "development"
+            env: "staging"
+        when: ((item.tags.keys()[1].split('/')[2]=='ops') or (item.tags.keys()[1].split('/')[2]=='ops-data'))
+          tags:
+            cost: "ops"
+            env: "ops"
+      when: ((item.tags !=None) and (item.tags.env is not defined or item.tags.cost is not defined) and (item.tags.env is not defined and item.tags.cost is not defined))
+      loop: "{{ ebs_data.volumes }}"
+      loop_control:
+          label: "Volumes"
+
